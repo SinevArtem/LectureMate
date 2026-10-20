@@ -3,11 +3,12 @@ import {
   TrendingDown,
   TrendingUp,
   Lightbulb,
-  Timer,
+  Maximize2,
 } from 'lucide-react'
 import type { Task } from '../../data/tasks'
 import { difficultyLabel } from '../../data/tasks'
 import { cn } from '../../lib/utils'
+import { useFullscreen } from '../../context/FullscreenContext'
 
 interface TaskHeaderProps {
   task: Task
@@ -30,9 +31,10 @@ export function TaskHeader({
   onHarder,
   onHint,
 }: TaskHeaderProps) {
+  const { enter } = useFullscreen()
+
   return (
     <div className="flex flex-col gap-3 rounded-2xl border border-border bg-surface p-4">
-      {/* Верхняя строка: код, тип, сложность */}
       <div className="flex flex-wrap items-center gap-2 text-xs">
         <span className="rounded-md bg-surface-2 px-2 py-1 font-medium text-text">
           {task.code}
@@ -48,10 +50,8 @@ export function TaskHeader({
         </span>
       </div>
 
-      {/* Условие */}
       <p className="text-base leading-relaxed text-text">{task.statement}</p>
 
-      {/* Кнопки */}
       <div className="flex flex-wrap items-center gap-2">
         <button
           onClick={onNext}
@@ -83,6 +83,15 @@ export function TaskHeader({
         >
           <Lightbulb className="h-3.5 w-3.5" />
           Подсказка
+        </button>
+
+        <button
+          onClick={enter}
+          title="Развернуть доску на весь экран"
+          className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface-2 px-3 py-1.5 text-sm text-text transition hover:border-accent/50"
+        >
+          <Maximize2 className="h-3.5 w-3.5" />
+          <span className="hidden sm:inline">Развернуть</span>
         </button>
       </div>
     </div>
