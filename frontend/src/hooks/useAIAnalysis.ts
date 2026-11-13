@@ -44,8 +44,8 @@ export function useAIAnalysis(task: Task, board: BoardSnapshot | null, enabled =
   }, [board, task])
 
   useEffect(() => {
-    if (!enabled) return
-    const timer = window.setTimeout(() => void run('hint'), board ? 700 : 0)
+    if (!enabled || !board?.imageDataUrl) return
+    const timer = window.setTimeout(() => void run('hint'), 700)
     return () => window.clearTimeout(timer)
   }, [enabled, task.id, board, board?.revision, run])
 

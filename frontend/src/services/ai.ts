@@ -24,7 +24,12 @@ export class HttpAIProvider implements AIProvider {
       method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'text/event-stream' },
       body: JSON.stringify(request), signal,
     })
-    if (!response.ok || !response.body) throw new Error(`AI API: ${response.status}`)
+    if (!response.ok || !response.body) {
+      const details = await response.text().catch(() => '')
+      let message = `AI API: ${response.status}`
+      try { message = JSON.parse(details).detail ?? JSON.parse(details).error ?? message } catch { /* keep status */ }
+      throw new Error(message)
+    }
     const reader = response.body.getReader()
     const decoder = new TextDecoder()
     let buffer = ''
