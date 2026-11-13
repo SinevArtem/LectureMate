@@ -24,6 +24,8 @@ export interface BoardSnapshot {
   /** Сериализованная часть документа tldraw. */
   document: unknown
   shapeCount: number
+  /** Текстовые объекты доски; полезны для быстрого локального анализа. */
+  textContent: string[]
   capturedAt: number
 }
 

@@ -15,7 +15,13 @@ export function Board({ onSnapshotChange }: BoardProps) {
           const emit = () => {
             revision += 1
             const document = editor.store.serialize('document')
-            onSnapshotChange?.({ revision, document, shapeCount: Object.keys(document).length, capturedAt: Date.now() })
+            const records = Object.values(document as Record<string, unknown>)
+            const textContent = records.flatMap((record) => {
+              if (!record || typeof record !== 'object') return []
+              const props = (record as { props?: { text?: unknown } }).props
+              return typeof props?.text === 'string' && props.text.trim() ? [props.text.trim()] : []
+            })
+            onSnapshotChange?.({ revision, document, shapeCount: records.length, textContent, capturedAt: Date.now() })
           }
           emit()
           return editor.store.listen(emit, { scope: 'document' })

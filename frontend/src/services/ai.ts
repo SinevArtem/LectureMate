@@ -32,6 +32,16 @@ function solutionFor(task: AIAnalysisRequest['task']): SolutionStep[] {
   ]
 }
 
+function checkSimpleEquality(text: string): { actual: number; expected: number } | null {
+  const match = text.replace(',', '.').match(/^\s*(-?\d+(?:\.\d+)?)\s*([+\-*])\s*(-?\d+(?:\.\d+)?)\s*=\s*(-?\d+(?:\.\d+)?)\s*$/)
+  if (!match) return null
+  const left = Number(match[1])
+  const right = Number(match[3])
+  const expected = Number(match[4])
+  const actual = match[2] === '+' ? left + right : match[2] === '-' ? left - right : left * right
+  return { actual, expected }
+}
+
 /** Локальный провайдер позволяет разрабатывать UI до подключения сервера. */
 export class MockAIProvider implements AIProvider {
   async *analyze(request: AIAnalysisRequest, signal?: AbortSignal): AsyncGenerator<AIAnalysisEvent> {
@@ -39,11 +49,17 @@ export class MockAIProvider implements AIProvider {
     yield { type: 'task_type', taskType: taskTypeFor(request.task) }
     if (request.mode === 'hint') {
       await wait(450, signal)
+      const candidate = request.board?.textContent.find((text) => checkSimpleEquality(text))
+      const checked = candidate ? checkSimpleEquality(candidate) : null
       yield {
         type: 'hint',
         hint: {
           id: crypto.randomUUID(), lineIndex: Math.max((request.board?.shapeCount ?? 1) - 1, 0),
-          severity: 'info', text: 'Проверьте последний шаг: выражение должно сохранять равенство с обеих сторон.', createdAt: Date.now(),
+          severity: checked && checked.actual !== checked.expected ? 'error' : 'info',
+          text: checked && checked.actual !== checked.expected
+            ? `Проверьте вычисление: получаете ${checked.actual}, а записано ${checked.expected}.`
+            : 'Проверьте последний шаг: выражение должно сохранять равенство с обеих сторон.',
+          createdAt: Date.now(),
         },
       }
     } else {
