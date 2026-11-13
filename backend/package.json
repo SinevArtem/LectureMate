@@ -1,6 +1,0 @@
-{
-  "name": "lecturemate-ai-backend",
-  "private": true,
-  "type": "module",
-  "scripts": { "dev": "node --watch server.mjs", "start": "node server.mjs" }
-}

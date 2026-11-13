@@ -23,9 +23,12 @@ npm run dev
 Для запуска реального анализа локально нужны два процесса:
 
 ```bash
-# терминал 1
+# терминал 1: backend
 cd backend
-AI_PROVIDER=ollama AI_MODEL=qwen2.5vl:7b npm start
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+AI_MODEL=qwen2.5vl:7b uvicorn main:app --reload --port 8787
 
 # терминал 2
 cd frontend
@@ -40,4 +43,4 @@ curl -fsSL https://ollama.com/install.sh | sh
 ollama pull qwen2.5vl:7b
 ```
 
-Backend отправляет снимок доски в локальную Ollama vision-модель, проверяет простые арифметические равенства и не принимает одну и ту же ревизию задачи повторно. OpenAI-ключ для этого режима не нужен.
+Python backend отправляет снимок доски в локальную Ollama vision-модель, подготавливает изображение через OpenCV и Pillow, дополняет результат OCR через Tesseract, проверяет арифметику через SymPy и не принимает одну и ту же ревизию задачи повторно. OpenAI-ключ для этого режима не нужен.
