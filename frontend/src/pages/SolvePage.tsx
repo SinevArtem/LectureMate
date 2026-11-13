@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { Minimize2 } from 'lucide-react'
+import { CheckCircle2, Minimize2 } from 'lucide-react'
 import { Board } from '../components/board/Board'
 import { AIPanel } from '../components/ai-panel/AIPanel'
 import { TaskHeader } from '../components/solve/TaskHeader'
@@ -14,6 +14,7 @@ import {
   type Difficulty,
   type Task,
 } from '../data/tasks'
+import type { BoardSnapshot } from '../types/ai'
 
 const DIFFICULTY_ORDER: Difficulty[] = ['easy', 'medium', 'hard']
 
@@ -23,8 +24,10 @@ export function SolvePage() {
   const taskFromUrl = getTaskById(searchParams.get('task') ?? '')
 
   const [task, setTask] = useState<Task>(taskFromUrl ?? allTasks[0])
-  const { hints, taskType, isAnalyzing, clearHints, pushHint } =
-    useAIAnalysis(true)
+  const [boardSnapshot, setBoardSnapshot] = useState<BoardSnapshot | null>(null)
+  const {
+    hints, taskType, solution, status, error, reset: resetAI, retry, requestSolution,
+  } = useAIAnalysis(task, boardSnapshot)
   const [solveAllOpen, setSolveAllOpen] = useState(false)
 
   // Esc — выход из фуллскрина
@@ -45,7 +48,7 @@ export function SolvePage() {
   const setTaskAndReset = (next: Task) => {
     setTask(next)
     setSearchParams({ task: next.id })
-    clearHints()
+    resetAI()
   }
 
   const handleNext = useCallback(() => {
@@ -65,14 +68,8 @@ export function SolvePage() {
   )
 
   const handleHint = useCallback(() => {
-    pushHint({
-      id: crypto.randomUUID(),
-      lineIndex: 0,
-      severity: 'info',
-      text: 'Попробуйте выразить коэффициенты a, b, c и посчитать дискриминант D = b² − 4ac.',
-      createdAt: Date.now(),
-    })
-  }, [pushHint])
+    setBoardSnapshot((snapshot) => snapshot ? { ...snapshot, revision: snapshot.revision + 1 } : snapshot)
+  }, [])
 
   // ⬇️ ВАЖНО: ОДНО дерево, классы меняются через isFullscreen
   return (
@@ -120,7 +117,7 @@ export function SolvePage() {
         }
       >
         <div className="min-h-0 flex-1">
-          <Board />
+          <Board onSnapshotChange={setBoardSnapshot} />
         </div>
 
         {/* Панель ИИ: в фуллскрине скрыта через CSS, но остаётся в дереве */}
@@ -134,9 +131,12 @@ export function SolvePage() {
           <AIPanel
             taskType={taskType}
             hints={hints}
-            isAnalyzing={isAnalyzing}
-            onSolveAll={() => setSolveAllOpen(true)}
-            onClear={clearHints}
+            isAnalyzing={status === 'connecting' || status === 'streaming'}
+            status={status}
+            error={error}
+            onRetry={() => retry()}
+            onSolveAll={() => { setSolveAllOpen(true); void requestSolution() }}
+            onClear={resetAI}
           />
         </div>
       </div>
@@ -150,11 +150,24 @@ export function SolvePage() {
             className="max-w-md rounded-2xl border border-border bg-surface p-6 text-text"
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 className="text-lg font-semibold">Решение всей задачи</h3>
-            <p className="mt-2 text-sm text-muted">
-              Модалка с пошаговым решением и KaTeX-формулами появится здесь
-              следующим шагом.
-            </p>
+            <div className="flex items-center justify-between gap-4">
+              <h3 className="text-lg font-semibold">Решение всей задачи</h3>
+              {status === 'streaming' && <span className="text-xs text-accent">Печатаю…</span>}
+            </div>
+            <p className="mt-2 text-sm text-muted">{task.statement}</p>
+            <div className="mt-4 space-y-3">
+              {solution.map((step) => (
+                <div key={step.id} className="rounded-xl border border-border bg-surface-2/60 p-3">
+                  <div className="flex items-center gap-2 text-sm font-semibold text-text">
+                    <CheckCircle2 className="h-4 w-4 text-success" />
+                    {step.order}. {step.title}
+                  </div>
+                  {step.expression && <code className="mt-2 block rounded-lg bg-bg p-2 text-xs text-accent">{step.expression}</code>}
+                  <p className="mt-2 text-sm text-muted">{step.explanation}</p>
+                </div>
+              ))}
+              {solution.length === 0 && <p className="text-sm text-muted">Готовлю пошаговое объяснение…</p>}
+            </div>
             <button
               onClick={() => setSolveAllOpen(false)}
               className="mt-4 rounded-xl bg-accent px-4 py-2 text-sm font-semibold text-bg hover:bg-accent-2"

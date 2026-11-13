@@ -1,6 +1,6 @@
 import { AnimatePresence, motion } from 'framer-motion'
-import { Sparkles, Play, Loader2, Eraser } from 'lucide-react'
-import type { Hint, TaskType } from '../../types/ai'
+import { Sparkles, Play, Loader2, Eraser, Wifi, WifiOff } from 'lucide-react'
+import type { AIAnalysisStatus, Hint, TaskType } from '../../types/ai'
 import { TaskTypeBadge } from './TaskTypeBadge'
 import { HintCard } from './HintCard'
 
@@ -8,6 +8,9 @@ interface AIPanelProps {
   taskType: TaskType | null
   hints: Hint[]
   isAnalyzing: boolean
+  status: AIAnalysisStatus
+  error: string | null
+  onRetry: () => void
   onSolveAll: () => void
   onClear: () => void
 }
@@ -16,6 +19,9 @@ export function AIPanel({
   taskType,
   hints,
   isAnalyzing,
+  status,
+  error,
+  onRetry,
   onSolveAll,
   onClear,
 }: AIPanelProps) {
@@ -29,6 +35,21 @@ export function AIPanel({
         <div className="text-sm font-medium text-text">ИИ-помощник</div>
         {isAnalyzing && (
           <Loader2 className="ml-auto h-4 w-4 animate-spin text-accent" />
+        )}
+        {!isAnalyzing && status === 'ready' && <Wifi className="ml-auto h-4 w-4 text-success" />}
+        {status === 'error' && <WifiOff className="ml-auto h-4 w-4 text-error" />}
+      </div>
+
+      <div className="rounded-lg bg-surface-2/70 px-2.5 py-2 text-xs text-muted">
+        {status === 'connecting' && 'Подключаюсь к AI-сервису…'}
+        {status === 'streaming' && 'Анализирую последние штрихи…'}
+        {status === 'ready' && 'Помощник следит за решением в реальном времени'}
+        {status === 'idle' && 'Помощник готов к анализу'}
+        {status === 'error' && (
+          <span className="flex items-center justify-between gap-2 text-error">
+            <span>{error ?? 'Сервис временно недоступен'}</span>
+            <button onClick={onRetry} className="font-semibold underline">Повторить</button>
+          </span>
         )}
       </div>
 

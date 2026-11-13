@@ -17,3 +17,30 @@ export interface TaskType {
   /** 0..1 */
   confidence: number
 }
+
+export interface BoardSnapshot {
+  /** Версия состояния доски, чтобы API мог отбросить устаревший ответ. */
+  revision: number
+  /** Сериализованная часть документа tldraw. */
+  document: unknown
+  shapeCount: number
+  capturedAt: number
+}
+
+export interface SolutionStep {
+  id: string
+  order: number
+  title: string
+  explanation: string
+  expression?: string
+}
+
+export type AIAnalysisStatus = 'idle' | 'connecting' | 'streaming' | 'ready' | 'error'
+
+export type AIAnalysisEvent =
+  | { type: 'task_type'; taskType: TaskType }
+  | { type: 'hint'; hint: Hint }
+  | { type: 'solution_step'; step: SolutionStep }
+  | { type: 'status'; message: string }
+  | { type: 'done' }
+  | { type: 'error'; message: string }
