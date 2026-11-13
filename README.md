@@ -25,7 +25,7 @@ npm run dev
 ```bash
 # терминал 1
 cd backend
-OPENAI_API_KEY=... npm start
+AI_PROVIDER=ollama AI_MODEL=qwen2.5vl:7b npm start
 
 # терминал 2
 cd frontend
@@ -33,4 +33,11 @@ npm install
 npm run dev
 ```
 
-Backend отправляет снимок доски в vision API, проверяет простые арифметические равенства и не принимает одну и ту же ревизию задачи повторно. Без `OPENAI_API_KEY` анализ завершается явной ошибкой; фиктивных подсказок больше нет.
+Перед этим установи Ollama и модель:
+
+```bash
+curl -fsSL https://ollama.com/install.sh | sh
+ollama pull qwen2.5vl:7b
+```
+
+Backend отправляет снимок доски в локальную Ollama vision-модель, проверяет простые арифметические равенства и не принимает одну и ту же ревизию задачи повторно. OpenAI-ключ для этого режима не нужен.

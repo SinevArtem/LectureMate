@@ -1,7 +1,9 @@
 import http from 'node:http'
 
 const port = Number(process.env.PORT ?? 8787)
-const model = process.env.OPENAI_VISION_MODEL ?? 'gpt-4o-mini'
+const provider = process.env.AI_PROVIDER ?? 'ollama'
+const model = process.env.AI_MODEL ?? (provider === 'ollama' ? 'qwen2.5vl:7b' : 'gpt-4o-mini')
+const ollamaUrl = process.env.OLLAMA_URL ?? 'http://127.0.0.1:11434'
 const seen = new Map()
 
 const json = (res, status, body) => { res.writeHead(status, { 'Content-Type': 'application/json' }); res.end(JSON.stringify(body)) }
@@ -17,13 +19,16 @@ function checkArithmetic(text) {
 }
 
 async function analyzeWithVision(payload) {
-  if (!process.env.OPENAI_API_KEY) throw new Error('OPENAI_API_KEY is not configured on the backend')
+  if (provider !== 'ollama' && !process.env.OPENAI_API_KEY) throw new Error('OPENAI_API_KEY is not configured on the backend')
   if (!payload.board?.imageDataUrl) throw new Error('Board image is missing')
   const prompt = `Ты проверяешь решение школьника. Распознай ВСЕ рукописные математические записи на изображении доски. Верни JSON без markdown: {"taskType":{"code":"string","title":"string","confidence":0},"recognizedText":["string"],"hints":[{"lineIndex":0,"severity":"info|warning|error","text":"string"}]}. Если равенство неверно, обязательно укажи фактический результат и ошибку. Не выдумывай записи, которых нет.`
-  const response = await fetch('https://api.openai.com/v1/chat/completions', { method: 'POST', headers: { Authorization: `Bearer ${process.env.OPENAI_API_KEY}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ model, temperature: 0, response_format: { type: 'json_object' }, messages: [{ role: 'user', content: [{ type: 'text', text: `${prompt}\nУсловие: ${payload.task.statement}` }, { type: 'image_url', image_url: { url: payload.board.imageDataUrl, detail: 'high' } }] }] }) })
+  const response = provider === 'ollama'
+    ? await fetch(`${ollamaUrl}/api/chat`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ model, stream: false, format: 'json', options: { temperature: 0 }, messages: [{ role: 'user', content: `${prompt}\nУсловие: ${payload.task.statement}`, images: [payload.board.imageDataUrl.replace(/^data:image\/[^;]+;base64,/, '')] }] }) })
+    : await fetch('https://api.openai.com/v1/chat/completions', { method: 'POST', headers: { Authorization: `Bearer ${process.env.OPENAI_API_KEY}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ model, temperature: 0, response_format: { type: 'json_object' }, messages: [{ role: 'user', content: [{ type: 'text', text: `${prompt}\nУсловие: ${payload.task.statement}` }, { type: 'image_url', image_url: { url: payload.board.imageDataUrl, detail: 'high' } }] }] }) })
   if (!response.ok) throw new Error(`Vision API returned ${response.status}`)
   const data = await response.json()
-  return JSON.parse(data.choices?.[0]?.message?.content ?? '{}')
+  const content = provider === 'ollama' ? data.message?.content : data.choices?.[0]?.message?.content
+  return JSON.parse(content ?? '{}')
 }
 
 const server = http.createServer(async (req, res) => {
