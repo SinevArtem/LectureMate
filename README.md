@@ -20,4 +20,17 @@ npm run dev
 
 Чтобы подключить backend, задайте `VITE_AI_API_URL` (пример — в `frontend/.env.example`). Endpoint принимает `POST` с телом `{ task, board, mode }`, где `mode` равен `hint` или `solution`, и возвращает Server-Sent Events. Каждое событие должно быть JSON в строке `data:` с одним из типов `task_type`, `hint`, `solution_step`, `status`, `done` или `error`; завершение также можно обозначить `data: [DONE]`.
 
-Пока переменная не задана, используется mock-провайдер, поэтому UI можно разрабатывать и тестировать без ключей и AI-сервера.
+Для запуска реального анализа локально нужны два процесса:
+
+```bash
+# терминал 1
+cd backend
+OPENAI_API_KEY=... npm start
+
+# терминал 2
+cd frontend
+npm install
+npm run dev
+```
+
+Backend отправляет снимок доски в vision API, проверяет простые арифметические равенства и не принимает одну и ту же ревизию задачи повторно. Без `OPENAI_API_KEY` анализ завершается явной ошибкой; фиктивных подсказок больше нет.

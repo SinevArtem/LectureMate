@@ -26,6 +26,7 @@ export interface BoardSnapshot {
   shapeCount: number
   /** Текстовые объекты доски; полезны для быстрого локального анализа. */
   textContent: string[]
+  imageDataUrl?: string
   capturedAt: number
 }
 

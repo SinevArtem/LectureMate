@@ -12,6 +12,7 @@ export function Board({ onSnapshotChange }: BoardProps) {
       <Tldraw
         onMount={(editor) => {
           let revision = 0
+          let timer: number | undefined
           const emit = () => {
             revision += 1
             const document = editor.store.serialize('document')
@@ -21,10 +22,20 @@ export function Board({ onSnapshotChange }: BoardProps) {
               const props = (record as { props?: { text?: unknown } }).props
               return typeof props?.text === 'string' && props.text.trim() ? [props.text.trim()] : []
             })
-            onSnapshotChange?.({ revision, document, shapeCount: records.length, textContent, capturedAt: Date.now() })
+            void editor.toImage(editor.getCurrentPageShapes(), { format: 'png', background: true }).then(async ({ blob }) => {
+              const imageDataUrl = await new Promise<string>((resolve, reject) => {
+                const reader = new FileReader()
+                reader.onload = () => resolve(String(reader.result))
+                reader.onerror = () => reject(reader.error)
+                reader.readAsDataURL(blob)
+              })
+              onSnapshotChange?.({ revision, document, shapeCount: records.length, textContent, imageDataUrl, capturedAt: Date.now() })
+            }).catch(() => onSnapshotChange?.({ revision, document, shapeCount: records.length, textContent, capturedAt: Date.now() }))
           }
-          emit()
-          return editor.store.listen(emit, { scope: 'document' })
+          const schedule = () => { window.clearTimeout(timer); timer = window.setTimeout(emit, 900) }
+          schedule()
+          const unsubscribe = editor.store.listen(schedule, { scope: 'document' })
+          return () => { window.clearTimeout(timer); unsubscribe() }
         }}
       />
     </div>
