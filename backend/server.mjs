@@ -31,10 +31,15 @@ const server = http.createServer(async (req, res) => {
   try {
     const payload = await readBody(req)
     const key = `${payload.task?.id}:${payload.board?.revision}:${payload.mode}`
-    if (seen.has(key)) return json(res, 409, { error: 'Revision already analyzed' })
+    if (seen.has(key)) {
+      res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', Connection: 'keep-alive' })
+      sse(res, { type: 'status', message: 'Эта ревизия уже была проверена' })
+      sse(res, { type: 'done' })
+      return res.end()
+    }
+    const result = await analyzeWithVision(payload)
     seen.set(key, Date.now())
     if (seen.size > 1000) seen.delete(seen.keys().next().value)
-    const result = await analyzeWithVision(payload)
     const arithmetic = (result.recognizedText ?? []).map(checkArithmetic).find(Boolean)
     res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', Connection: 'keep-alive' })
     if (result.taskType) sse(res, { type: 'task_type', taskType: result.taskType })
